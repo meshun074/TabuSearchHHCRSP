@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import java.util.ArrayList;
 import java.util.List;

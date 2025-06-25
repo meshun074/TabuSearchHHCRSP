@@ -1,25 +1,30 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import org.example.Data.InstancesClass;
 import org.example.Main;
 
 import java.util.*;
 
-public class Chromosome {
+public class Solution {
     private List<Integer>[] genes;
     private int caregivers;
     private int first=-1;
     private int second=-1;
+    private int third=-1;
+    private int fourth=-1;
     private int firstPosition =-1;
     private int secondPosition =-1;
+    private int thirdPosition =-1;
+    private int fourthPosition =-1;
     private double fitness;
     private double totalTravelCost;
     private double totalTardiness;
     private double highestTardiness;
     private Shift[] caregiversRouteUp;
+    private int lastmove = -1;
     private final Map<Integer, Set<Integer>> patientToRoutesMap = new HashMap<>();
 
-    public Chromosome(List<Integer>[] genes, boolean newChromosome) {
+    public Solution(List<Integer>[] genes, boolean newChromosome) {
         if (newChromosome) {
             this.genes = new ArrayList[genes.length];
             for (int i = 0; i < genes.length; i++) {
@@ -37,7 +42,7 @@ public class Chromosome {
         this.highestTardiness = 0;
     }
 
-    public Chromosome(List<Integer>[] genes, double fitness, boolean newChromosome) {
+    public Solution(List<Integer>[] genes, double fitness, boolean newChromosome) {
         if (newChromosome) {
             this.genes = new ArrayList[genes.length];
             for (int i = 0; i < genes.length; i++) {
@@ -50,7 +55,7 @@ public class Chromosome {
         this.caregivers = genes.length;
         this.fitness = fitness;
         caregiversRouteUp = new Shift[caregivers];
-        InstancesClass instance = Main.instance;
+        InstancesClass instance = Main.instances;
         for(int i =0; i<caregivers;i++){
             Shift s = new Shift(instance.getCaregivers()[i],new ArrayList<>(),0.0);
             caregiversRouteUp[i] = s;
@@ -59,7 +64,7 @@ public class Chromosome {
         this.totalTardiness = 0;
         this.highestTardiness = 0;
     }
-    public Chromosome(List<Integer>[] genes, double fitness, boolean newChromosome, Shift[] routes) {
+    public Solution(List<Integer>[] genes, double fitness, boolean newChromosome, Shift[] routes) {
         if (newChromosome) {
             this.genes = new ArrayList[genes.length];
             for (int i = 0; i < genes.length; i++) {
@@ -75,6 +80,14 @@ public class Chromosome {
         this.totalTravelCost = 0;
         this.totalTardiness = 0;
         this.highestTardiness = 0;
+    }
+
+    public int getMove() {
+        return lastmove;
+    }
+
+    public void setMoves(int move) {
+        this.lastmove = move;
     }
 
     public int getFirst() {
@@ -107,6 +120,38 @@ public class Chromosome {
 
     public void setSecondPosition(int secondPosition) {
         this.secondPosition = secondPosition;
+    }
+
+    public int getThird() {
+        return third;
+    }
+
+    public void setThird(int third) {
+        this.third = third;
+    }
+
+    public int getFourth() {
+        return fourth;
+    }
+
+    public void setFourth(int fourth) {
+        this.fourth = fourth;
+    }
+
+    public int getThirdPosition() {
+        return thirdPosition;
+    }
+
+    public void setThirdPosition(int thirdPosition) {
+        this.thirdPosition = thirdPosition;
+    }
+
+    public int getFourthPosition() {
+        return fourthPosition;
+    }
+
+    public void setFourthPosition(int fourthPosition) {
+        this.fourthPosition = fourthPosition;
     }
 
     public int getCaregivers() {
@@ -200,6 +245,24 @@ public class Chromosome {
             System.out.println();
         }
 
+    }
+    public static Solution generateSolution() {
+        List<Integer> patients= new ArrayList<>();
+        InstancesClass instance = Main.instances;
+        int chLength = instance.getPatients().length;
+        for (int s = 0; s < chLength; s++) {
+            patients.add(s);
+        }
+        Collections.shuffle(patients);
+        int caregiverNumber = instance.getCaregivers().length;
+        AssignPatients as = new AssignPatients(instance);
+        RouteInitializer ri = new RouteInitializer(patients,caregiverNumber,0.0);
+        as.Evaluate(Collections.singletonList(ri));
+        Solution ch = new Solution(ri.getCaregiversRoute(),ri.getSolutionCost(),false, ri.getCaregiversShift());
+        ch.setTotalTravelCost(ri.getTotalTravelCost());
+        ch.setTotalTardiness(ri.getTotalTardiness());
+        ch.setHighestTardiness(ri.getHighestTardiness());
+        return ch;
     }
     public String toString() {
         StringBuilder genesStrings= new StringBuilder();

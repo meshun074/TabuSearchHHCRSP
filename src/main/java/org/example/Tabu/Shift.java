@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import org.example.Data.Caregiver;
 
@@ -27,7 +27,7 @@ public class Shift {
         tardiness.add(0.0);
         maxTardiness.add(0.0);
     }
-    public Shift(Caregiver caregiver,  List<Integer> route, List<Double> currentTime, List<Double> travelCost, List<Double> tardiness, List<Double> maxTardiness) {
+    public Shift(Caregiver caregiver, List<Integer> route, List<Double> currentTime, List<Double> travelCost, List<Double> tardiness, List<Double> maxTardiness) {
         this.caregiver = caregiver;
         this.route = route;
         this.currentTime = currentTime;

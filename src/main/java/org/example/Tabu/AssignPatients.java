@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import org.example.Data.Caregiver;
 import org.example.Data.InstancesClass;

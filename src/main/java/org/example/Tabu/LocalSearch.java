@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import org.example.Data.InstancesClass;
 import org.example.Data.Patient;
@@ -6,62 +6,36 @@ import org.example.Data.Patient;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.example.GA.EvaluationFunction.*;
-import static org.example.GA.GeneticAlgorithm.conflictCheck;
+import static org.example.Tabu.EvaluationFunction.*;
 
 public class LocalSearch implements Runnable {
     @Override
     public void run() {
-        ga.getLSChromosomes().put(r, search());
+        tabuSearch.getLSSolution().add(localSearch());
     }
 
-    private GeneticAlgorithm ga;
-    private Chromosome ch;
+    private TabuSearchMain tabuSearch;
+    private Solution ch;
     private final Random rand;
-    private final int r;
-    private final int gen;
     private static Patient[] allPatients;
     private static int allCaregivers;
     private static double[][] distances;
 
-    public LocalSearch(GeneticAlgorithm ga, Chromosome ch, int r, int gen ) {
-        this.ga = ga;
+    public LocalSearch( TabuSearchMain tabuSearch, Solution ch) {
+        this.tabuSearch = tabuSearch;
         this.ch = ch;
         this.rand = ThreadLocalRandom.current();
-        this.r = r;
-        this.gen = gen;
     }
     public static void initialize(InstancesClass data) {
         allPatients = data.getPatients();
         distances = data.getDistances();
         allCaregivers = data.getCaregivers().length;
     }
-
-    public Chromosome search() {
-        Chromosome best = ch;
-        boolean continueLS;
-        boolean genCont = gen >= 100;
-        int counter = 0;
-        Random rand = new Random();
-        do {
-            continueLS = false;
-            ch = localSearch(ch);
-            if (ch.getFitness() < best.getFitness()|| ch.getFitness() == best.getFitness()&&rand.nextBoolean()) {
-                best = ch;
-                continueLS = true;
-            } else {
-                if (genCont && counter < 6) {
-                    continueLS = true;
-                }
-            }
-            counter++;
-        } while (continueLS);
-        return best;
-    }
-    private Chromosome localSearch(Chromosome ch) {
+    private Solution localSearch() {
         List<Integer>[] p1Routes, c1Routes;
         int patientLength = allPatients.length;
-        int size = (int) (patientLength * 0.2);
+        double random = 0.4 + 0.1*Math.random();
+        int size = (int) (patientLength * random);
         Set<Integer> selectRoute = new LinkedHashSet<>(size);
         Random rand = new Random();
         while (selectRoute.size() < size) {
@@ -83,12 +57,12 @@ public class LocalSearch implements Runnable {
         }
         //Inserting removed route
         List<Integer> route2 = new ArrayList<>(selectRoute);
-        Chromosome cTemp = new Chromosome(c1Routes, 0.0, true);
+        Solution cTemp = new Solution(c1Routes, 0.0, true);
         EvaluationFunction.Evaluate(cTemp);
         boolean isInvalid;
         for (int i = 0; i < route2.size(); i++) {
             isInvalid = cTemp.getFitness() == Double.POSITIVE_INFINITY;
-            Chromosome bestChromosome = null;
+            Solution bestChromosome = null;
             int patient = route2.get(i);
             Patient p = allPatients[patient];
             cTemp.buildPatientRouteMap();
@@ -103,7 +77,7 @@ public class LocalSearch implements Runnable {
                             if (noEvaluationConflicts(c1Routes[first], c1Routes[second], m, n)) {
                                 c1Routes[first].add(m, patient);
                                 c1Routes[second].add(n, patient);
-                                Chromosome temp = isInvalid?new Chromosome(c1Routes, 0.0,true): new Chromosome(c1Routes, true);
+                                Solution temp = isInvalid?new Solution(c1Routes, 0.0,true): new Solution(c1Routes, true);
                                 temp.setFirst(first);
                                 temp.setFirstPosition(m);
                                 temp.setSecond(second);
@@ -133,7 +107,7 @@ public class LocalSearch implements Runnable {
                     int first = caregiverPair.getFirst();
                     for (int k = 0; k <= c1Routes[first].size(); k++) {
                         c1Routes[first].add(k, patient);
-                        Chromosome temp = isInvalid?new Chromosome(c1Routes, 0.0,true): new Chromosome(c1Routes, true);
+                        Solution temp = isInvalid?new Solution(c1Routes, 0.0,true): new Solution(c1Routes, true);
                         temp.setFirst(first);
                         temp.setFirstPosition(k);
                         bestChromosome = evaluateMove(temp,bestChromosome,cTemp,isInvalid);
@@ -151,10 +125,11 @@ public class LocalSearch implements Runnable {
                 }
             }
         }
+        cTemp.setMoves(route2.get(route2.size() - 1));
         return cTemp;
     }
 
-    private Chromosome evaluateMove(Chromosome temp, Chromosome bestChromosome, Chromosome base, boolean isInvalid) {
+    private Solution evaluateMove(Solution temp, Solution bestChromosome, Solution base, boolean isInvalid) {
         int[] routeEndPoint = new int[allCaregivers];
         Arrays.fill(routeEndPoint, -1);
         if (isInvalid) {
@@ -235,9 +210,9 @@ public class LocalSearch implements Runnable {
         }
         return bestChromosome;
     }
-    private Chromosome swap(Chromosome ch, boolean isInvalid, int patient) {
+    private Solution swap(Solution ch, boolean isInvalid, int patient) {
         ch.buildPatientRouteMap();
-        Chromosome bestChromosome = ch;
+        Solution bestChromosome = ch;
         List<Integer>[] routes = ch.getGenes();
         if (ch.getSecond() != -1) {
             int first = ch.getFirst();
@@ -252,7 +227,7 @@ public class LocalSearch implements Runnable {
                     route1.set(firstPosition, p3);
                     route1.set(z, patient);
                     int newFirstPosition = Math.min(firstPosition,z);
-                    Chromosome temp = isInvalid? new Chromosome(routes,0.0, true): new Chromosome(routes, true);
+                    Solution temp = isInvalid? new Solution(routes,0.0, true): new Solution(routes, true);
                     temp.setFirst(first);
                     temp.setFirstPosition(newFirstPosition);
                     temp.setSecond(second);
@@ -269,7 +244,7 @@ public class LocalSearch implements Runnable {
                     route2.set(secondPosition, p4);
                     route2.set(l, patient);
                     int newSecondPosition = Math.min(secondPosition,l);
-                    Chromosome temp = isInvalid? new Chromosome(routes,0.0, true): new Chromosome(routes, true);
+                    Solution temp = isInvalid? new Solution(routes,0.0, true): new Solution(routes, true);
                     temp.setFirst(first);
                     temp.setFirstPosition(firstPosition);
                     temp.setSecond(second);
@@ -291,7 +266,7 @@ public class LocalSearch implements Runnable {
                             route2.set(l, patient);
                             int newFirstPosition = Math.min(firstPosition,z);
                             int newSecondPosition = Math.min(secondPosition,l);
-                            Chromosome temp = isInvalid? new Chromosome(routes,0.0,true): new Chromosome(routes, true);
+                            Solution temp = isInvalid? new Solution(routes,0.0,true): new Solution(routes, true);
                             temp.setFirst(first);
                             temp.setFirstPosition(newFirstPosition);
                             temp.setSecond(second);
@@ -315,7 +290,7 @@ public class LocalSearch implements Runnable {
                     route1.set(firstPosition, p2);
                     route1.set(i, patient);
                     int newFirstPosition = Math.min(firstPosition,i);
-                    Chromosome temp = isInvalid? new Chromosome(routes,0.0,true): new Chromosome(routes, true);
+                    Solution temp = isInvalid? new Solution(routes,0.0,true): new Solution(routes, true);
                     temp.setFirst(first);
                     temp.setFirstPosition(newFirstPosition);
                     bestChromosome = evaluateMove(temp,bestChromosome,ch,isInvalid);
@@ -326,7 +301,7 @@ public class LocalSearch implements Runnable {
         }
         return bestChromosome;
     }
-    private void evaluate(Chromosome temp, int[] routeEndPoint, Chromosome bestChromosome) {
+    private void evaluate(Solution temp, int[] routeEndPoint, Solution bestChromosome) {
         Shift[] shifts = temp.getCaregiversRouteUp();
         Set<Integer> track = new HashSet<>(100);
         List<Integer>[] genes = temp.getGenes();
@@ -361,5 +336,20 @@ public class LocalSearch implements Runnable {
     }
     private boolean noEvaluationConflicts(List<Integer> c1Route, List<Integer> c2Route, int m, int n) {
         return conflictCheck(c1Route, c2Route, m, n);
+    }
+    public static boolean conflictCheck(List<Integer> c1Route, List<Integer> c2Route, int m, int n) {
+        int index1;
+        int index2;
+        Set<Integer> route2 = new HashSet<>(c2Route);
+        for (int i = 0; i < c1Route.size(); i++) {
+            if (route2.contains(c1Route.get(i))) {
+                index1 = c1Route.indexOf(c1Route.get(i));
+                index2 = c2Route.indexOf(c1Route.get(i));
+                if (m <= index1 && n > index2 || m > index1 && n <= index2) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

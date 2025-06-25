@@ -10,7 +10,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class TabuSearch {
+public class TabuSearchInRoute {
     private final OperatingSystemMXBean osBean;
     private Solution currentSolution;
     private Solution bestSolution;
@@ -20,14 +20,14 @@ public class TabuSearch {
     private final int searchSize;
     private long startCpuTime;
     private long startTime;
-    private List<Solution> LSChromosomes;
+    private List<Solution> LSSolutions;
     private final Queue<Integer> tabuList;
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
 
-    public TabuSearch(Solution solution, InstancesClass data, int searchSize) {
+    public TabuSearchInRoute(Solution solution, InstancesClass data, int searchSize) {
         currentSolution = solution;
         this.searchSize = searchSize;
-        LSChromosomes  = new ArrayList<>(searchSize);
+        LSSolutions = new ArrayList<>(searchSize);
         bestSolution = currentSolution;
         Patient[] allPatients = data.getPatients();
         this.osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
@@ -35,7 +35,7 @@ public class TabuSearch {
         EvaluationFunction.initialize(data);
         this.MAX_TABU_SIZE = allPatients.length/3;
         tabuList = new LinkedList<>();
-        LocalSearch.initialize(data);
+        LocalSearchInRoute.initialize(data);
     }
 
     public Solution Start(){
@@ -64,18 +64,40 @@ public class TabuSearch {
         return bestSolution;
     }
     private Solution findBestMove(Solution currentSolution) {
+
+            LSSolutions.clear();
+//            for(int i = 0; i < searchSize; i++) {
+//                LocalSearchInRoute ls = new LocalSearchInRoute(this,currentSolution);
+//                LSSolutions.add(ls.localSearch());
+//            }
+
+            List<Solution> lsChromosomes = LSSolutions;
+            synchronized (lsChromosomes) {
+                sortSolutions(lsChromosomes);
+                for(Solution solution : lsChromosomes) {
+                    if(solution.getFitness()<bestSolution.getFitness()){
+                        return solution;
+                    }else if(!tabuList.contains(solution.getMove())){
+                        return solution;
+                    }
+                }
+                return lsChromosomes.get(0);
+            }
+
+    }
+    private Solution findBestMove1(Solution currentSolution) {
         try (ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE)) {
             List<Callable<Void>> tasks = new ArrayList<>(searchSize);
-            LSChromosomes = Collections.synchronizedList(new ArrayList<>());
-            for(int i = 0; i < searchSize; i++) {
-                tasks.add(()->{
-                    new LocalSearch(this,currentSolution).run();
-                    return null;
-                });
-            }
+            LSSolutions = Collections.synchronizedList(new ArrayList<>());
+//            for(int i = 0; i < searchSize; i++) {
+//                tasks.add(()->{
+//                    new LocalSearchInRoute(this,currentSolution).run();
+//                    return null;
+//                });
+//            }
             try{
                 executor.invokeAll(tasks);
-                List<Solution> lsChromosomes = LSChromosomes;
+                List<Solution> lsChromosomes = LSSolutions;
                 synchronized (lsChromosomes) {
                     sortSolutions(lsChromosomes);
                     for(Solution solution : lsChromosomes) {
@@ -112,7 +134,7 @@ public class TabuSearch {
         long endTime = System.currentTimeMillis();
         return (endTime - startTime) / 1_000.0;
     }
-    public List<Solution> getLSChromosomes() {
-        return LSChromosomes;
+    public List<Solution> getLSSolutions() {
+        return LSSolutions;
     }
 }

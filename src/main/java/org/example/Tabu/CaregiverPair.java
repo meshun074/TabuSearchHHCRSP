@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 public class CaregiverPair {
     private final int first;

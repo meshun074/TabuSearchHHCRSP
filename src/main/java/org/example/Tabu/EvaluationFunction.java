@@ -1,4 +1,4 @@
-package org.example.GA;
+package org.example.Tabu;
 
 import org.example.Data.Caregiver;
 import org.example.Data.InstancesClass;
@@ -27,7 +27,7 @@ public class EvaluationFunction {
         allCaregivers = dataset.getCaregivers();
     }
 
-    public static void EvaluateFitness(List<Chromosome> population) {
+    public static void EvaluateFitness(List<Solution> population) {
 
                 try (ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
                     try {
@@ -42,7 +42,7 @@ public class EvaluationFunction {
                     }
                 }
     }
-    private static void Evaluate(Chromosome temp, Chromosome base, boolean isInvalid){
+    private static void Evaluate(Solution temp, Solution base, boolean isInvalid){
         int[] routeEndPoint = new int[allCaregivers.length];
         Arrays.fill(routeEndPoint, -1);
         if(isInvalid){
@@ -113,7 +113,7 @@ public class EvaluationFunction {
         evaluate(temp,routeEndPoint);
 
     }
-    public static void removeAffectedPatient(int[] routeMove, int[] positionMove, Chromosome base, int[] routeEndPoint) {
+    public static void removeAffectedPatient(int[] routeMove, int[] positionMove, Solution base, int[] routeEndPoint) {
         Map<Integer, Set<Integer>> patientToRoutesMap = base.getPatientToRoutesMap();
         List<Integer>[] genes = base.getGenes();
         for(int j = 0; j < routeMove.length; j++){
@@ -125,6 +125,10 @@ public class EvaluationFunction {
                 Patient p = allPatients[patient];
                 if (p.getRequired_caregivers().length > 1) {
                     int routeIndex = getRouteIndexMethod(first, patientToRoutesMap.get(patient));
+                    if(routeIndex == -1){
+                        System.out.println(patientToRoutesMap.get(patient));
+                        System.exit(1);
+                    }
                     int patientIndex = genes[routeIndex].indexOf(patient);
                     if (routeEndPoint[routeIndex] == -1 || routeEndPoint[routeIndex] > patientIndex) {
                         routeEndPoint[routeIndex] = patientIndex;
@@ -147,7 +151,7 @@ public class EvaluationFunction {
         return -1; // other route not found
     }
 
-    private static void evaluate(Chromosome temp, int[] routeEndPoint) {
+    private static void evaluate(Solution temp, int[] routeEndPoint) {
         Shift[] shifts = temp.getCaregiversRouteUp();
         Set<Integer> track = new HashSet<>(100);
         List<Integer>[] genes = temp.getGenes();
@@ -178,7 +182,7 @@ public class EvaluationFunction {
         UpdateCost(temp);
     }
 
-    public static void Evaluate(Chromosome ch) {
+    public static void Evaluate(Solution ch) {
         Shift[] routes = ch.getCaregiversRouteUp();
         for (int i = 0; i < routes.length; i++) {
             routes[i].resetShift();
@@ -223,7 +227,7 @@ public class EvaluationFunction {
         UpdateCost(ch);
     }
 
-    public static boolean patientAssignment(Chromosome ch, int patient, Shift caregiver1, Shift[] routes, int i, Set<Integer> track) {
+    public static boolean patientAssignment(Solution ch, int patient, Shift caregiver1, Shift[] routes, int i, Set<Integer> track) {
         Patient p = allPatients[patient];
         double[] timeWindow = p.getTime_window();
         int currentLocation1 = caregiver1.getRoute().isEmpty() ? 0 : caregiver1.getRoute().get(caregiver1.getRoute().size() - 1) + 1;
@@ -278,11 +282,13 @@ public class EvaluationFunction {
     }
 
 
-    static void UpdateCost(Chromosome ch) {
-        ch.setFitness((1 / 3d * ch.getTotalTravelCost()) + (1 / 3d * ch.getTotalTardiness()) + (1 / 3d * ch.getHighestTardiness()));
+    static void UpdateCost(Solution ch) {
+        double cost = (1 / 3d * ch.getTotalTravelCost()) + (1 / 3d * ch.getTotalTardiness()) + (1 / 3d * ch.getHighestTardiness());
+        cost = Math.round(cost*1000.0)/1000.0;
+        ch.setFitness(cost);
     }
 
-    private static int findSecondCaregiver(int pIndex, int route1, Shift[] routes, Chromosome ch, Set<Integer> track) {
+    private static int findSecondCaregiver(int pIndex, int route1, Shift[] routes, Solution ch, Set<Integer> track) {
         List<Integer>[] genes = ch.getGenes();
 
         for (int i = 0; i < genes.length; i++) {
@@ -321,7 +327,7 @@ public class EvaluationFunction {
                 (service1Routes.contains(caregiver2Id) && !service1Routes.contains(caregiver1Id));
     }
 
-    private static void processSynchronization(Chromosome ch, Patient p, Shift caregiver1,
+    private static void processSynchronization(Solution ch, Patient p, Shift caregiver1,
                                                Shift caregiver2, Required_Caregiver[] requiredCaregivers, double startTime1,
                                                double startTime2, double timeWindowEnd) {
 
@@ -350,7 +356,7 @@ public class EvaluationFunction {
         caregiver2.updateTardiness(tardiness2);
     }
 
-    private static void updateCaregiverRoutes(Chromosome ch, Shift caregiver1,
+    private static void updateCaregiverRoutes(Solution ch, Shift caregiver1,
                                               Shift caregiver2, int patientId, double cost1, double cost2, double totalCost) {
         ch.updateTotalTravelCost(totalCost);
         caregiver1.updateRoute(patientId);
@@ -359,7 +365,7 @@ public class EvaluationFunction {
         caregiver2.updateTravelCost(cost2);
     }
 
-    private static void processSingleCaregiver(Chromosome ch, Shift caregiver,
+    private static void processSingleCaregiver(Solution ch, Shift caregiver,
                                                Patient p, int patient, double startTime, double timeWindowEnd, double travelCost) {
         double tardiness = Math.max(0, startTime - timeWindowEnd);
         ch.setHighestTardiness(Math.max(tardiness, ch.getHighestTardiness()));

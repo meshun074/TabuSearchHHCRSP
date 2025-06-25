@@ -1,6 +1,6 @@
 package org.example.Data;
 
-import org.example.GA.CaregiverPair;
+import org.example.Tabu.CaregiverPair;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

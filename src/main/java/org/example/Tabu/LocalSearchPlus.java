@@ -8,20 +8,20 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.example.Tabu.EvaluationFunction.*;
 
-public class LocalSearch implements Runnable {
+public class LocalSearchPlus implements Runnable {
     @Override
     public void run() {
-        tabuSearch.getLSChromosomes().add(localSearch());
+        tabuSearch.getLSSolution().add(localSearch());
     }
 
-    private TabuSearch tabuSearch;
+    private TabuSearchMain tabuSearch;
     private Solution ch;
     private final Random rand;
     private static Patient[] allPatients;
     private static int allCaregivers;
     private static double[][] distances;
 
-    public LocalSearch( TabuSearch tabuSearch, Solution ch) {
+    public LocalSearchPlus(TabuSearchMain tabuSearch, Solution ch) {
         this.tabuSearch = tabuSearch;
         this.ch = ch;
         this.rand = ThreadLocalRandom.current();
@@ -31,10 +31,10 @@ public class LocalSearch implements Runnable {
         distances = data.getDistances();
         allCaregivers = data.getCaregivers().length;
     }
-    private Solution localSearch() {
+    public Solution localSearch() {
         List<Integer>[] p1Routes, c1Routes;
         int patientLength = allPatients.length;
-        int size = (int) (patientLength * (0.1 + 0.5*Math.random()));
+        int size = (int) (patientLength * (0.3+0.1*Math.random()));
         Set<Integer> selectRoute = new LinkedHashSet<>(size);
         Random rand = new Random();
         while (selectRoute.size() < size) {
@@ -71,6 +71,7 @@ public class LocalSearch implements Runnable {
                     CaregiverPair caregiverPair = caregiverPairs.get(x);
                     int first = caregiverPair.getFirst();
                     int second = caregiverPair.getSecond();
+                    Solution tempBestChromosome = null;
                     for (int m = 0; m <= c1Routes[first].size(); m++) {
                         for (int n = 0; n <= c1Routes[second].size(); n++) {
                             if (noEvaluationConflicts(c1Routes[first], c1Routes[second], m, n)) {
@@ -81,17 +82,22 @@ public class LocalSearch implements Runnable {
                                 temp.setFirstPosition(m);
                                 temp.setSecond(second);
                                 temp.setSecondPosition(n);
-                                bestChromosome = evaluateMove(temp,bestChromosome,cTemp,isInvalid);
+                                tempBestChromosome = evaluateMove(temp,tempBestChromosome,cTemp,isInvalid);
                                 c1Routes[first].remove(Integer.valueOf(patient));
                                 c1Routes[second].remove(Integer.valueOf(patient));
                             }
                         }
                     }
+                    if(tempBestChromosome != null) {
+                        isInvalid = tempBestChromosome.getFitness() == Double.POSITIVE_INFINITY;
+                        tempBestChromosome = swap(tempBestChromosome, isInvalid, patient);
+                        if(bestChromosome == null||tempBestChromosome.getFitness() < bestChromosome.getFitness()) {
+                            bestChromosome = tempBestChromosome;
+                        }
+                    }
                 }
 
                 if (bestChromosome != null) {
-                    isInvalid = bestChromosome.getFitness() == Double.POSITIVE_INFINITY;
-                    bestChromosome = swap(bestChromosome, isInvalid, patient);
                     int first = bestChromosome.getFirst();
                     int second = bestChromosome.getSecond();
                     List<Integer>[] routes = bestChromosome.getGenes();
@@ -102,6 +108,7 @@ public class LocalSearch implements Runnable {
             } else {
                 List<CaregiverPair> caregiverPairs = p.getAllPossibleCaregiverCombinations();
                 for (int x = 0; x < caregiverPairs.size(); x++) {
+                    Solution tempBestChromosome = null;
                     CaregiverPair caregiverPair = caregiverPairs.get(x);
                     int first = caregiverPair.getFirst();
                     for (int k = 0; k <= c1Routes[first].size(); k++) {
@@ -109,14 +116,18 @@ public class LocalSearch implements Runnable {
                         Solution temp = isInvalid?new Solution(c1Routes, 0.0,true): new Solution(c1Routes, true);
                         temp.setFirst(first);
                         temp.setFirstPosition(k);
-                        bestChromosome = evaluateMove(temp,bestChromosome,cTemp,isInvalid);
+                        tempBestChromosome = evaluateMove(temp,tempBestChromosome,cTemp,isInvalid);
                         c1Routes[first].remove(Integer.valueOf(patient));
                     }
+                    if(tempBestChromosome != null) {
+                        isInvalid = tempBestChromosome.getFitness() == Double.POSITIVE_INFINITY;
+                        tempBestChromosome = swap(tempBestChromosome, isInvalid, patient);
+                        if(bestChromosome == null||tempBestChromosome.getFitness() < bestChromosome.getFitness()) {
+                           bestChromosome = tempBestChromosome;
+                        }
+                    }
                 }
-
                 if (bestChromosome != null) {
-                    isInvalid = bestChromosome.getFitness() == Double.POSITIVE_INFINITY;
-                    bestChromosome = swap(bestChromosome, isInvalid, patient);
                     int first = bestChromosome.getFirst();
                     List<Integer> route = bestChromosome.getGenes()[first];
                     c1Routes[first] = new ArrayList<>(route);
