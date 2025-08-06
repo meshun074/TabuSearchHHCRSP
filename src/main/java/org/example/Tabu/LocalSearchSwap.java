@@ -11,18 +11,20 @@ import static org.example.Tabu.EvaluationFunction.*;
 public class LocalSearchSwap implements Runnable {
     @Override
     public void run() {
-        tabuSearch.getLSSolution().add(localSearch());
+        tabuSearch.getLSChromosomes().add(localSearch());
     }
 
-    private final TabuSearchMain tabuSearch;
+    private final TabuSearchTest tabuSearch;
     private final Solution ch;
     private final Random rand;
+    private final int patient;
     private static Patient[] allPatients;
     private static int allCaregivers;
     private static double[][] distances;
 
-    public LocalSearchSwap(TabuSearchMain tabuSearch, Solution ch) {
+    public LocalSearchSwap(TabuSearchTest tabuSearch, Solution ch, int patient) {
         this.tabuSearch = tabuSearch;
+        this.patient = patient;
         this.ch = ch;
         this.rand = ThreadLocalRandom.current();
     }
@@ -35,22 +37,7 @@ public class LocalSearchSwap implements Runnable {
 
     public Solution localSearch() {
         List<Integer>[] p1Routes, c1Routes;
-        int patientLength = allPatients.length;
-        int size = (int) (patientLength * 0.4);
-        Set<Integer> selectRoute = new LinkedHashSet<>(size);
-        Random rand = new Random();
-        for (int i = 0; i < size; i++) {
-            int sp = rand.nextInt(patientLength);
-            selectRoute.add(sp);
-        }
-//        Set<Integer> selectRoute = new LinkedHashSet<>(1);
-//        selectRoute.add(randomPatient);
-//        while (selectRoute.isEmpty()) {
-//            int sp = rand.nextInt(patientLength);
-//            if(!tabu.contains(sp)) {
-//                selectRoute.add(sp);
-//            }
-//        }
+
         p1Routes = ch.getGenes();
         c1Routes = new ArrayList[p1Routes.length];
         //initialize new genes for local search
@@ -59,152 +46,143 @@ public class LocalSearchSwap implements Runnable {
             c1Routes[i] = route1;
         }
         //Inserting removed route
-        List<Integer> route2 = new ArrayList<>(selectRoute);
+
         Solution cTemp = new Solution(c1Routes, 0.0, true);
         EvaluationFunction.Evaluate(cTemp);
         boolean isInvalid;
         double bestFitness = cTemp.getFitness();
-//        System.out.println("Swapping patients: "+ route2);
-        for (int i = 0; i < route2.size(); i++) {
-            isInvalid = cTemp.getFitness() == Double.POSITIVE_INFINITY;
-            Solution bestChromosome = null;
-            int patient = route2.get(i);
-//            System.out.println("Patient: "+patient);
-//            System.out.print(" c1Routes ");
-//            for(int u = 0; u < c1Routes.length; u++) {
-//                System.out.print(c1Routes[u]);
-//            }
-//            System.out.println();
-//            System.out.println(" cTemp ");
-//            System.out.println(cTemp+" - "+cTemp.getFitness());
-            Patient p = allPatients[patient];
-            cTemp.buildPatientRouteMap();
-            if (p.getRequired_caregivers().length > 1) {
-                List<CaregiverPair> caregiverPairs = p.getAllPossibleCaregiverCombinations();
-                List<Integer> patientIndexRoutes = new ArrayList<>(cTemp.getPatientRoutes(patient));
-                int patientRouteIndex1 = patientIndexRoutes.get(0), patientRouteIndex2 = patientIndexRoutes.get(1);
-                Set<Integer> firstPossibleRoutes = p.getPossibleFirstCaregiver();
-                Set<Integer> secondPossibleRoutes = p.getPossibleSecondCaregiver();
-                if (!firstPossibleRoutes.contains(patientRouteIndex1) || !secondPossibleRoutes.contains(patientRouteIndex2)) {
-                    patientRouteIndex1 = patientIndexRoutes.get(1);
-                    patientRouteIndex2 = patientIndexRoutes.get(0);
-                }
-                int p1Index = c1Routes[patientRouteIndex1].indexOf(patient);
-                int p2Index = c1Routes[patientRouteIndex2].indexOf(patient);
-                for (int x = 0; x < caregiverPairs.size(); x++) {
-                    CaregiverPair caregiverPair = caregiverPairs.get(x);
-                    int c1 = caregiverPair.getFirst();
-                    if (c1 == patientRouteIndex1) {
-                        for (int j = 0; j < c1Routes[c1].size(); j++) {
-                            int otherPatient1 = c1Routes[c1].get(j);
-                            swapPatients(c1Routes[c1], p1Index, j);
+
+        isInvalid = cTemp.getFitness() == Double.POSITIVE_INFINITY;
+        Solution bestChromosome = null;
+
+        Patient p = allPatients[patient];
+        cTemp.buildPatientRouteMap();
+        if (p.getRequired_caregivers().length > 1) {
+            List<CaregiverPair> caregiverPairs = p.getAllPossibleCaregiverCombinations();
+            List<Integer> patientIndexRoutes = new ArrayList<>(cTemp.getPatientRoutes(patient));
+            int patientRouteIndex1 = patientIndexRoutes.get(0), patientRouteIndex2 = patientIndexRoutes.get(1);
+            Set<Integer> firstPossibleRoutes = p.getPossibleFirstCaregiver();
+            Set<Integer> secondPossibleRoutes = p.getPossibleSecondCaregiver();
+            if (!firstPossibleRoutes.contains(patientRouteIndex1) || !secondPossibleRoutes.contains(patientRouteIndex2)) {
+                patientRouteIndex1 = patientIndexRoutes.get(1);
+                patientRouteIndex2 = patientIndexRoutes.get(0);
+            }
+            int p1Index = c1Routes[patientRouteIndex1].indexOf(patient);
+            int p2Index = c1Routes[patientRouteIndex2].indexOf(patient);
+            for (int x = 0; x < caregiverPairs.size(); x++) {
+                CaregiverPair caregiverPair = caregiverPairs.get(x);
+                int c1 = caregiverPair.getFirst();
+                if (c1 == patientRouteIndex1) {
+                    for (int j = 0; j < c1Routes[c1].size(); j++) {
+                        int otherPatient1 = c1Routes[c1].get(j);
+                        swapPatients(c1Routes[c1], p1Index, j);
 //                            System.out.print(" c1Routes after swapping first in c1");
 //                            for(int u = 0; u < c1Routes.length; u++) {
 //                                System.out.print(c1Routes[u]);
 //                            }
 //                            System.out.println();
-                            boolean firstSwap = otherPatient1 != patient;
-                            int first = Math.min(p1Index, j);
-                            if (firstSwap) {
-                                Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                temp.setFirst(c1);
-                                temp.setFirstPosition(first);
-                                bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                        boolean firstSwap = otherPatient1 != patient;
+                        int first = Math.min(p1Index, j);
+                        if (firstSwap) {
+                            Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                            temp.setFirst(c1);
+                            temp.setFirstPosition(first);
+                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
 //                                System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
-                            }
-                            int c2 = caregiverPair.getSecond();
-                            if (c2 == patientRouteIndex2) {
-                                for (int k = 0; k < c1Routes[c2].size(); k++) {
-                                    int otherPatient2 = c1Routes[c2].get(k);
-                                    swapPatients(c1Routes[c2], p2Index, k);
+                        }
+                        int c2 = caregiverPair.getSecond();
+                        if (c2 == patientRouteIndex2) {
+                            for (int k = 0; k < c1Routes[c2].size(); k++) {
+                                int otherPatient2 = c1Routes[c2].get(k);
+                                swapPatients(c1Routes[c2], p2Index, k);
 //                                    System.out.print(" c1Routes after swapping in c2 "+otherPatient2);
 //                                    for(int u = 0; u < c1Routes.length; u++) {
 //                                        System.out.print(c1Routes[u]);
 //                                    }
 //                                    System.out.println();
-                                    boolean secondSwap = otherPatient2 != patient;
-                                    if (secondSwap) {
-                                        Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                        int second = Math.min(p2Index, k);
-                                        if (firstSwap) {
-                                            temp1.setFirst(c1);
-                                            temp1.setFirstPosition(first);
-                                            temp1.setSecond(c2);
-                                            temp1.setSecondPosition(second);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        } else {
-                                            temp1.setFirst(c2);
-                                            temp1.setFirstPosition(second);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        }
-//                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
+                                boolean secondSwap = otherPatient2 != patient;
+                                if (secondSwap) {
+                                    Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                                    int second = Math.min(p2Index, k);
+                                    if (firstSwap) {
+                                        temp1.setFirst(c1);
+                                        temp1.setFirstPosition(first);
+                                        temp1.setSecond(c2);
+                                        temp1.setSecondPosition(second);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
+                                    } else {
+                                        temp1.setFirst(c2);
+                                        temp1.setFirstPosition(second);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
                                     }
-                                    swapPatients(c1Routes[c2], p2Index, k);
+//                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
+                                }
+                                swapPatients(c1Routes[c2], p2Index, k);
 //                                    System.out.print(" c1Routes after swapping back in c2 "+otherPatient2);
 //                                    for(int u = 0; u < c1Routes.length; u++) {
 //                                        System.out.print(c1Routes[u]);
 //                                    }
 //                                    System.out.println();
-                                }
-                            } else {
-                                for (int k = 0; k < c1Routes[c2].size(); k++) {
-                                    int otherPatient2 = c1Routes[c2].get(k);
-                                    Patient patient2 = allPatients[otherPatient2];
-                                    if(swapIsPossible(cTemp, otherPatient2, patient2,patientRouteIndex2,c2)){
-                                        c1Routes[c2].set(k, patient);
-                                        c1Routes[patientRouteIndex2].set(p2Index, otherPatient2);
+                            }
+                        } else {
+                            for (int k = 0; k < c1Routes[c2].size(); k++) {
+                                int otherPatient2 = c1Routes[c2].get(k);
+                                Patient patient2 = allPatients[otherPatient2];
+                                if (swapIsPossible(cTemp, otherPatient2, patient2, patientRouteIndex2, c2)) {
+                                    c1Routes[c2].set(k, patient);
+                                    c1Routes[patientRouteIndex2].set(p2Index, otherPatient2);
 //                                        System.out.print(" c1Routes after swapping in same c1, diff routes for c2 "+ c2+" patient "+otherPatient2);
 //                                        for(int u = 0; u < c1Routes.length; u++) {
 //                                            System.out.print(c1Routes[u]);
 //                                        }
 //                                        System.out.println();
-                                        Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                        if (firstSwap) {
-                                            temp.setFirst(c1);
-                                            temp.setFirstPosition(first);
-                                            temp.setSecond(c2);
-                                            temp.setSecondPosition(k);
-                                            temp.setThird(patientRouteIndex2);
-                                            temp.setThirdPosition(p2Index);
-                                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
-                                        } else {
-                                            temp.setFirst(c2);
-                                            temp.setFirstPosition(k);
-                                            temp.setSecond(patientRouteIndex2);
-                                            temp.setSecondPosition(p2Index);
-                                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
-                                        }
+                                    Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                                    if (firstSwap) {
+                                        temp.setFirst(c1);
+                                        temp.setFirstPosition(first);
+                                        temp.setSecond(c2);
+                                        temp.setSecondPosition(k);
+                                        temp.setThird(patientRouteIndex2);
+                                        temp.setThirdPosition(p2Index);
+                                        bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                                    } else {
+                                        temp.setFirst(c2);
+                                        temp.setFirstPosition(k);
+                                        temp.setSecond(patientRouteIndex2);
+                                        temp.setSecondPosition(p2Index);
+                                        bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                                    }
 //                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
-                                        c1Routes[c2].set(k, otherPatient2);
-                                        c1Routes[patientRouteIndex2].set(p2Index, patient);
+                                    c1Routes[c2].set(k, otherPatient2);
+                                    c1Routes[patientRouteIndex2].set(p2Index, patient);
 //                                        System.out.print(" c1Routes after swapping in same c1, and swapping back diff routes for c2 "+ c2+" patient "+otherPatient2);
 //                                        for(int u = 0; u < c1Routes.length; u++) {
 //                                            System.out.print(c1Routes[u]);
 //                                        }
 //                                        System.out.println();
-                                    }
                                 }
                             }
-                            swapPatients(c1Routes[c1], p1Index, j);
                         }
-                    } else {
+                        swapPatients(c1Routes[c1], p1Index, j);
+                    }
+                } else {
 //                        System.out.println("double swap");
-                        for (int j = 0; j < c1Routes[c1].size(); j++) {
-                            int otherPatient1 = c1Routes[c1].get(j);
-                            Patient patient1 = allPatients[otherPatient1];
-                            boolean firstSwap = swapIsPossible(cTemp,otherPatient1,patient1,patientRouteIndex1,c1);
+                    for (int j = 0; j < c1Routes[c1].size(); j++) {
+                        int otherPatient1 = c1Routes[c1].get(j);
+                        Patient patient1 = allPatients[otherPatient1];
+                        boolean firstSwap = swapIsPossible(cTemp, otherPatient1, patient1, patientRouteIndex1, c1);
 //                            System.out.println("Firstswap "+firstSwap);
-                            if (firstSwap) {
-                                c1Routes[c1].set(j, patient);
-                                c1Routes[patientRouteIndex1].set(p1Index, otherPatient1);
-                                Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                temp.setFirst(c1);
-                                temp.setFirstPosition(j);
-                                temp.setSecond(patientRouteIndex1);
-                                temp.setSecondPosition(p1Index);
-                                bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                        if (firstSwap) {
+                            c1Routes[c1].set(j, patient);
+                            c1Routes[patientRouteIndex1].set(p1Index, otherPatient1);
+                            Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                            temp.setFirst(c1);
+                            temp.setFirstPosition(j);
+                            temp.setSecond(patientRouteIndex1);
+                            temp.setSecondPosition(p1Index);
+                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
 //                                System.out.println("swap at c1 "+ c1 + " patient "+ otherPatient1 );
-                            }
+                        }
 
 //                            System.out.print(" c1Routes after first two routes swap for c1 ");
 //                            for(int u = 0; u < c1Routes.length; u++) {
@@ -212,70 +190,69 @@ public class LocalSearchSwap implements Runnable {
 //                            }
 //                            System.out.println();
 
-                            int c2 = caregiverPair.getSecond();
-                            if (c2 == patientRouteIndex2) {
-                                for (int k = 0; k < c1Routes[c2].size(); k++) {
-                                    int otherPatient2 = c1Routes[c2].get(k);
-                                    swapPatients(c1Routes[c2], p2Index, k);
-                                    boolean secondSwap = otherPatient2 != patient;
-                                    if (secondSwap) {
-                                        Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                        int second = Math.min(p2Index, k);
-                                        if (firstSwap) {
-                                            temp1.setFirst(c1);
-                                            temp1.setFirstPosition(j);
-                                            temp1.setSecond(patientRouteIndex1);
-                                            temp1.setSecondPosition(p1Index);
-                                            temp1.setThird(c2);
-                                            temp1.setThirdPosition(second);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        }else
-                                        {
-                                            temp1.setFirst(c2);
-                                            temp1.setFirstPosition(second);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        }
-//                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
+                        int c2 = caregiverPair.getSecond();
+                        if (c2 == patientRouteIndex2) {
+                            for (int k = 0; k < c1Routes[c2].size(); k++) {
+                                int otherPatient2 = c1Routes[c2].get(k);
+                                swapPatients(c1Routes[c2], p2Index, k);
+                                boolean secondSwap = otherPatient2 != patient;
+                                if (secondSwap) {
+                                    Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                                    int second = Math.min(p2Index, k);
+                                    if (firstSwap) {
+                                        temp1.setFirst(c1);
+                                        temp1.setFirstPosition(j);
+                                        temp1.setSecond(patientRouteIndex1);
+                                        temp1.setSecondPosition(p1Index);
+                                        temp1.setThird(c2);
+                                        temp1.setThirdPosition(second);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
+                                    } else {
+                                        temp1.setFirst(c2);
+                                        temp1.setFirstPosition(second);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
                                     }
+//                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
+                                }
 //                                    System.out.print(" c1Routes after second same route swap for c2 "+c2+" patient "+otherPatient2);
 //                                    for(int u = 0; u < c1Routes.length; u++) {
 //                                        System.out.print(c1Routes[u]);
 //                                    }
 //                                    System.out.println();
-                                    swapPatients(c1Routes[c2], p2Index, k);
+                                swapPatients(c1Routes[c2], p2Index, k);
 //                                    System.out.print(" c1Routes after swapping back second same route swap c2 ");
 //                                    for(int u = 0; u < c1Routes.length; u++) {
 //                                        System.out.print(c1Routes[u]);
 //                                    }
 //                                    System.out.println();
-                                }
-                            } else {
-                                for (int k = 0; k < c1Routes[c2].size(); k++) {
-                                    int otherPatient2 = c1Routes[c2].get(k);
-                                    Patient patient2 = allPatients[otherPatient2];
-                                    boolean secondSwap = doubleSwapIsPossible(cTemp,otherPatient1,patientRouteIndex1,c1,firstSwap,otherPatient2,patient2,patientRouteIndex2,c2);
+                            }
+                        } else {
+                            for (int k = 0; k < c1Routes[c2].size(); k++) {
+                                int otherPatient2 = c1Routes[c2].get(k);
+                                Patient patient2 = allPatients[otherPatient2];
+                                boolean secondSwap = doubleSwapIsPossible(cTemp, otherPatient1, patientRouteIndex1, c1, firstSwap, otherPatient2, patient2, patientRouteIndex2, c2);
 //                                    System.out.println("secondSwap "+secondSwap);
-                                    if (secondSwap) {
-                                        c1Routes[c2].set(k, patient);
-                                        c1Routes[patientRouteIndex2].set(p2Index, otherPatient2);
-                                        Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                        if (firstSwap) {
-                                            temp1.setFirst(c1);
-                                            temp1.setFirstPosition(j);
-                                            temp1.setSecond(patientRouteIndex1);
-                                            temp1.setSecondPosition(p1Index);
-                                            temp1.setThird(c2);
-                                            temp1.setThirdPosition(k);
-                                            temp1.setFourth(patientRouteIndex2);
-                                            temp1.setFourthPosition(p2Index);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        } else {
-                                            temp1.setFirst(c2);
-                                            temp1.setFirstPosition(k);
-                                            temp1.setSecond(patientRouteIndex2);
-                                            temp1.setSecondPosition(p2Index);
-                                            bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
-                                        }
+                                if (secondSwap) {
+                                    c1Routes[c2].set(k, patient);
+                                    c1Routes[patientRouteIndex2].set(p2Index, otherPatient2);
+                                    Solution temp1 = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                                    if (firstSwap) {
+                                        temp1.setFirst(c1);
+                                        temp1.setFirstPosition(j);
+                                        temp1.setSecond(patientRouteIndex1);
+                                        temp1.setSecondPosition(p1Index);
+                                        temp1.setThird(c2);
+                                        temp1.setThirdPosition(k);
+                                        temp1.setFourth(patientRouteIndex2);
+                                        temp1.setFourthPosition(p2Index);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
+                                    } else {
+                                        temp1.setFirst(c2);
+                                        temp1.setFirstPosition(k);
+                                        temp1.setSecond(patientRouteIndex2);
+                                        temp1.setSecondPosition(p2Index);
+                                        bestChromosome = evaluateMove(temp1, bestChromosome, cTemp, isInvalid);
+                                    }
 //                                        System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
 
 //                                        System.out.print(" c1Routes after second two routes swap c2 "+c2+" patient "+otherPatient2);
@@ -283,233 +260,233 @@ public class LocalSearchSwap implements Runnable {
 //                                            System.out.print(c1Routes[u]);
 //                                        }
 //                                        System.out.println();
-                                        c1Routes[c2].set(k, otherPatient2);
-                                        c1Routes[patientRouteIndex2].set(p2Index, patient);
+                                    c1Routes[c2].set(k, otherPatient2);
+                                    c1Routes[patientRouteIndex2].set(p2Index, patient);
 
 //                                        System.out.print(" c1Routes after swapping back second two routes swap c2");
 //                                        for(int u = 0; u < c1Routes.length; u++) {
 //                                            System.out.print(c1Routes[u]);
 //                                        }
 //                                        System.out.println();
-                                    }
                                 }
                             }
+                        }
 
 
-                            if(firstSwap){
-                                c1Routes[c1].set(j, otherPatient1);
-                                c1Routes[patientRouteIndex1].set(p1Index, patient);
-                            }
+                        if (firstSwap) {
+                            c1Routes[c1].set(j, otherPatient1);
+                            c1Routes[patientRouteIndex1].set(p1Index, patient);
+                        }
 //                            System.out.print(" c1Routes after swapping back the first two routes swap c1");
 //                            for (int u = 0; u < c1Routes.length; u++) {
 //                                System.out.print(c1Routes[u]);
 //                            }
 //                            System.out.println();
-                        }
+                    }
 
+                }
+            }
+            if (bestChromosome != null && bestChromosome.getFitness() < bestFitness) {
+                int first = bestChromosome.getFirst();
+                int second = bestChromosome.getSecond();
+                int third = bestChromosome.getThird();
+                int fourth = bestChromosome.getFourth();
+                List<Integer>[] routes = bestChromosome.getGenes();
+                c1Routes[first] = new ArrayList<>(routes[first]);
+                if (second != -1) {
+                    c1Routes[second] = new ArrayList<>(routes[second]);
+                    if (third != -1) {
+                        c1Routes[third] = new ArrayList<>(routes[third]);
+                        if (fourth != -1) {
+                            c1Routes[fourth] = new ArrayList<>(routes[fourth]);
+                        }
                     }
                 }
-                if (bestChromosome != null&& bestChromosome.getFitness()<bestFitness) {
-                    int first = bestChromosome.getFirst();
-                    int second = bestChromosome.getSecond();
-                    int third = bestChromosome.getThird();
-                    int fourth = bestChromosome.getFourth();
-                    List<Integer>[] routes = bestChromosome.getGenes();
-                    c1Routes[first] = new ArrayList<>(routes[first]);
-                    if(second!=-1) {
-                        c1Routes[second] = new ArrayList<>(routes[second]);
-                        if(third!=-1) {
-                            c1Routes[third] = new ArrayList<>(routes[third]);
-                            if(fourth!=-1) {
-                                c1Routes[fourth] = new ArrayList<>(routes[fourth]);
-                            }
-                        }
-                    }
-                    cTemp = bestChromosome;
-                    bestFitness = cTemp.getFitness();
+                cTemp = bestChromosome;
+                bestFitness = cTemp.getFitness();
 //                    System.out.print(" c1Routes after updating "+first+" "+second+" "+third+" "+fourth);
 //                    for(int u = 0; u < c1Routes.length; u++) {
 //                        System.out.print(c1Routes[u]);
 //                    }
 //                    System.out.println();
-                }
+            }
 
 //                System.out.println("Ending Double ctemp "+cTemp);
-            } else {
-                List<CaregiverPair> caregiverPairs = p.getAllPossibleCaregiverCombinations();
-                Set<Integer> patientRouteIndexes = cTemp.getPatientRoutes(patient);
-                int patientRouteIndex =-1;
-                if(patientRouteIndexes==null) {
-                    System.out.println("Error");
-                    System.out.println("Patient :"+patient);
-                    System.out.println(cTemp);
-                    System.out.println("patientRouteIndexes is null");
-                }
-                for(int j: patientRouteIndexes ) {
-                    patientRouteIndex = j;
-                }
-                if(patientRouteIndex ==-1){
-                    System.out.println("No caregiver found for patient in Genes");
-                    System.exit(1);
-                }
-                int pIndex = c1Routes[patientRouteIndex].indexOf(patient);
+        } else {
+            List<CaregiverPair> caregiverPairs = p.getAllPossibleCaregiverCombinations();
+            Set<Integer> patientRouteIndexes = cTemp.getPatientRoutes(patient);
+            int patientRouteIndex = -1;
+            if (patientRouteIndexes == null) {
+                System.out.println("Error");
+                System.out.println("Patient :" + patient);
+                System.out.println(cTemp);
+                System.out.println("patientRouteIndexes is null");
+            }
+            for (int j : patientRouteIndexes) {
+                patientRouteIndex = j;
+            }
+            if (patientRouteIndex == -1) {
+                System.out.println("No caregiver found for patient in Genes");
+                System.exit(1);
+            }
+            int pIndex = c1Routes[patientRouteIndex].indexOf(patient);
 
-                for (int x = 0; x < caregiverPairs.size(); x++) {
-                    CaregiverPair caregiverPair = caregiverPairs.get(x);
-                    int c1 = caregiverPair.getFirst();
-                    if(c1 == patientRouteIndex){
-                        for(int k = 0; k < c1Routes[c1].size(); k++) {
-                            int otherPatient = c1Routes[c1].get(k);
+            for (int x = 0; x < caregiverPairs.size(); x++) {
+                CaregiverPair caregiverPair = caregiverPairs.get(x);
+                int c1 = caregiverPair.getFirst();
+                if (c1 == patientRouteIndex) {
+                    for (int k = 0; k < c1Routes[c1].size(); k++) {
+                        int otherPatient = c1Routes[c1].get(k);
 //                            System.out.println("k "+k + "other single patient "+otherPatient);
-                            if(otherPatient != patient){
+                        if (otherPatient != patient) {
 //                                System.out.println("before single 1 ");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                                swapPatients(c1Routes[c1],pIndex,k);
-                                int firstPosition = Math.min(pIndex,k);
+                            swapPatients(c1Routes[c1], pIndex, k);
+                            int firstPosition = Math.min(pIndex, k);
 //                                System.out.println("after single 1 swap");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                                Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                temp.setFirst(c1);
-                                temp.setFirstPosition(firstPosition);
-                                bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                            Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                            temp.setFirst(c1);
+                            temp.setFirstPosition(firstPosition);
+                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
 //                                System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
-                                swapPatients(c1Routes[c1],pIndex,k);
+                            swapPatients(c1Routes[c1], pIndex, k);
 //                                System.out.println("after swapping back single 1 ");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                            }
                         }
+                    }
 
-                    }else {
-                        for(int k = 0; k < c1Routes[c1].size(); k++) {
-                            int otherPatient = c1Routes[c1].get(k);
-                            Patient patient2 = allPatients[otherPatient];
-                            if(swapIsPossible(cTemp,otherPatient,patient2,patientRouteIndex,c1)){
+                } else {
+                    for (int k = 0; k < c1Routes[c1].size(); k++) {
+                        int otherPatient = c1Routes[c1].get(k);
+                        Patient patient2 = allPatients[otherPatient];
+                        if (swapIsPossible(cTemp, otherPatient, patient2, patientRouteIndex, c1)) {
 //                                System.out.println("before single 2 ");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                                c1Routes[c1].set(k, patient);
-                                c1Routes[patientRouteIndex].set(pIndex, otherPatient);
+                            c1Routes[c1].set(k, patient);
+                            c1Routes[patientRouteIndex].set(pIndex, otherPatient);
 //                                System.out.println("after swapping single 2 ");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                                Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
-                                temp.setFirst(c1);
-                                temp.setFirstPosition(k);
-                                temp.setSecond(patientRouteIndex);
-                                temp.setSecondPosition(pIndex);
-                                bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
+                            Solution temp = isInvalid ? new Solution(c1Routes, 0.0, true) : new Solution(c1Routes, true);
+                            temp.setFirst(c1);
+                            temp.setFirstPosition(k);
+                            temp.setSecond(patientRouteIndex);
+                            temp.setSecondPosition(pIndex);
+                            bestChromosome = evaluateMove(temp, bestChromosome, cTemp, isInvalid);
 //                                System.out.println(" best "+bestChromosome+" - "+bestChromosome.getFitness());
-                                c1Routes[c1].set(k, otherPatient);
-                                c1Routes[patientRouteIndex].set(pIndex, patient);
+                            c1Routes[c1].set(k, otherPatient);
+                            c1Routes[patientRouteIndex].set(pIndex, patient);
 //                                System.out.println("after swapping back single 2 ");
 //                                System.out.print(" c1Routes ");
 //                                for(int u = 0; u < c1Routes.length; u++) {
 //                                    System.out.print(c1Routes[u]);
 //                                }
 //                                System.out.println();
-                            }
                         }
                     }
                 }
+            }
 
-                if (bestChromosome != null&&bestChromosome.getFitness()<bestFitness) {
-                    int first = bestChromosome.getFirst();
-                    int second = bestChromosome.getSecond();
-                    List<Integer>[] routes = bestChromosome.getGenes();
-                    List<Integer> route = routes[first];
-                    c1Routes[first] = new ArrayList<>(route);
-                    if(second!=-1) {
-                        List<Integer> route1 = routes[second];
-                        c1Routes[second] = new ArrayList<>(route1);
-                    }
-                    cTemp = bestChromosome;
-                    bestFitness = cTemp.getFitness();
+            if (bestChromosome != null && bestChromosome.getFitness() < bestFitness) {
+                int first = bestChromosome.getFirst();
+                int second = bestChromosome.getSecond();
+                List<Integer>[] routes = bestChromosome.getGenes();
+                List<Integer> route = routes[first];
+                c1Routes[first] = new ArrayList<>(route);
+                if (second != -1) {
+                    List<Integer> route1 = routes[second];
+                    c1Routes[second] = new ArrayList<>(route1);
+                }
+                cTemp = bestChromosome;
+                bestFitness = cTemp.getFitness();
 //                    System.out.print(" c1Routes after updating "+first+" "+second);
 //                    for(int u = 0; u < c1Routes.length; u++) {
 //                        System.out.print(c1Routes[u]);
 //                    }
 //                    System.out.println();
-                }
-//                System.out.println("Ending single ctemp "+cTemp);
             }
+//                System.out.println("Ending single ctemp "+cTemp);
+        }
 //            System.out.println(cTemp+" - "+cTemp.getFitness());
 //            EvaluationFunction.Evaluate(cTemp);
 //            System.out.println("After evaluation");
 //            System.out.println(cTemp+" - "+cTemp.getFitness());
 //            System.out.println("Done");
-        }
-        cTemp.setMoves(route2.get(route2.size() - 1));
+
+        cTemp.setMoves(patient);
 //        System.exit(0);
         return cTemp;
     }
 
     private boolean doubleSwapIsPossible(Solution cTemp, int otherPatient1, int patientRouteIndex1, int c1, boolean firstSwap,
                                          int otherPatient2, Patient patient2, int patientRouteIndex2, int c2) {
-        if(patient2.getRequired_caregivers().length>1){
+        if (patient2.getRequired_caregivers().length > 1) {
             Set<Integer> routeIndexesOfOtherPatient2 = cTemp.getPatientRoutes(otherPatient2);
-            int otherPatient2RouteIndex2 =-1;
-            for(int r: routeIndexesOfOtherPatient2 ) {
-                if(r != c2) {
+            int otherPatient2RouteIndex2 = -1;
+            for (int r : routeIndexesOfOtherPatient2) {
+                if (r != c2) {
                     otherPatient2RouteIndex2 = r;
                     break;
                 }
             }
-            if(otherPatient2RouteIndex2 == -1) {
+            if (otherPatient2RouteIndex2 == -1) {
                 return false;
             }
             Set<Integer> possibleFirstRoute = patient2.getPossibleFirstCaregiver();
             Set<Integer> possibleSecondRoute = patient2.getPossibleSecondCaregiver();
-            if(otherPatient1 == otherPatient2){
-                if(firstSwap) {
+            if (otherPatient1 == otherPatient2) {
+                if (firstSwap) {
                     return possibleFirstRoute.contains(patientRouteIndex1) && possibleSecondRoute.contains(patientRouteIndex2)
                             || possibleFirstRoute.contains(patientRouteIndex2) && possibleSecondRoute.contains(patientRouteIndex1);
-                }else {
-                    if(c1==patientRouteIndex2)
+                } else {
+                    if (c1 == patientRouteIndex2)
                         return false;
                     return possibleFirstRoute.contains(c1) && possibleSecondRoute.contains(patientRouteIndex2)
                             || possibleFirstRoute.contains(patientRouteIndex2) && possibleSecondRoute.contains(c1);
                 }
-            }else {
-                if(patientRouteIndex2==otherPatient2RouteIndex2){
+            } else {
+                if (patientRouteIndex2 == otherPatient2RouteIndex2) {
                     return false;
                 }
                 return possibleFirstRoute.contains(otherPatient2RouteIndex2) && possibleSecondRoute.contains(patientRouteIndex2)
                         || possibleFirstRoute.contains(patientRouteIndex2) && possibleSecondRoute.contains(otherPatient2RouteIndex2);
             }
-        }else {
+        } else {
             return patient2.getPossibleFirstCaregiver().contains(patientRouteIndex2);
         }
     }
 
     private boolean swapIsPossible(Solution cTemp, int patientIndex, Patient patient, int routeIndex, int otherPatientRouteIndex1) {
-        if (patient.getRequired_caregivers().length >1) {
+        if (patient.getRequired_caregivers().length > 1) {
             Set<Integer> routeIndexesOfOtherPatient = cTemp.getPatientRoutes(patientIndex);
-            int otherPatientRouteIndex2 =-1;
-            for( int r : routeIndexesOfOtherPatient) {
-                if(r != otherPatientRouteIndex1) {
+            int otherPatientRouteIndex2 = -1;
+            for (int r : routeIndexesOfOtherPatient) {
+                if (r != otherPatientRouteIndex1) {
                     otherPatientRouteIndex2 = r;
                     break;
                 }
             }
-            if(otherPatientRouteIndex2 == -1||routeIndex == otherPatientRouteIndex2) {
+            if (otherPatientRouteIndex2 == -1 || routeIndex == otherPatientRouteIndex2) {
                 return false;
             }
             Set<Integer> possibleFirstRoute = patient.getPossibleFirstCaregiver();
@@ -517,7 +494,7 @@ public class LocalSearchSwap implements Runnable {
             return possibleFirstRoute.contains(otherPatientRouteIndex2) && possibleSecondRoute.contains(routeIndex)
                     || possibleFirstRoute.contains(routeIndex) && possibleSecondRoute.contains(otherPatientRouteIndex2);
 
-        }else {
+        } else {
             return patient.getPossibleFirstCaregiver().contains(routeIndex);
         }
     }

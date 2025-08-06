@@ -196,10 +196,10 @@ public class TabuSearchMain {
 //            Collections.shuffle(selectionList);
             for (int i = 0; i < searchSize; i++) {
 //                int patient = selectionList.get(i);
-                tasks.add(() -> {
-                    new LocalSearch(this, currentSolution).run();
-                    return null;
-                });
+//                tasks.add(() -> {
+//                    new LocalSearch(this, currentSolution).run();
+//                    return null;
+//                });
             }
 
             try {
@@ -264,7 +264,7 @@ public class TabuSearchMain {
 //            Collections.shuffle(selectionList);
             for (int i = 0; i < searchSize; i++) {
                 tasks.add(() -> {
-                    new LocalSearchSwap(this, currentSolution).run();
+//                    new LocalSearchSwap(this, currentSolution).run();
                     return null;
                 });
             }
@@ -307,39 +307,39 @@ public class TabuSearchMain {
 //            }
             double random = Math.random();
 //            Collections.shuffle(selectionList);
-            if (random < -0.04) {
-                for (int i = 0; i < searchSize; i++) {
-//                    int patient = selectionList.get(i);
-                    tasks.add(() -> {
-                        new LocalSearchSwap(this, currentSolution).run();
-                        return null;
-                    });
-                }
-            } else if (random < -0.08) {
-                for (int i = 0; i < searchSize; i++) {
-//                    int patient = selectionList.get(i);
-                    tasks.add(() -> {
-                        new LocalSearchInRoute(this, currentSolution).run();
-                        return null;
-                    });
-                }
-            } else if (random < -0.15) {
-                for (int i = 0; i < searchSize; i++) {
-//                    int patient = selectionList.get(i);
-                    tasks.add(() -> {
-                        new LocalSearch(this, currentSolution).run();
-                        return null;
-                    });
-                }
-            }else {
-                for (int i = 0; i < searchSize; i++) {
-//                    int patient = selectionList.get(i);
-                    tasks.add(() -> {
-                        new LocalSearchPlus(this, currentSolution).run();
-                        return null;
-                    });
-                }
-            }
+//            if (random < -0.04) {
+//                for (int i = 0; i < searchSize; i++) {
+////                    int patient = selectionList.get(i);
+//                    tasks.add(() -> {
+//                        new LocalSearchSwap(this, currentSolution).run();
+//                        return null;
+//                    });
+//                }
+//            } else if (random < -0.08) {
+//                for (int i = 0; i < searchSize; i++) {
+////                    int patient = selectionList.get(i);
+//                    tasks.add(() -> {
+//                        new LocalSearchInRoute(this, currentSolution).run();
+//                        return null;
+//                    });
+//                }
+//            } else if (random < -0.15) {
+//                for (int i = 0; i < searchSize; i++) {
+////                    int patient = selectionList.get(i);
+//                    tasks.add(() -> {
+//                        new LocalSearch(this, currentSolution).run();
+//                        return null;
+//                    });
+//                }
+//            }else {
+//                for (int i = 0; i < searchSize; i++) {
+////                    int patient = selectionList.get(i);
+//                    tasks.add(() -> {
+//                        new LocalSearchPlus(this, currentSolution).run();
+//                        return null;
+//                    });
+//                }
+//            }
 //            for(int i = 0; i < searchSize/2; i++) {
 //                tasks.add(()->{
 //                    new LocalSearchInRoute(this,currentSolution).run();

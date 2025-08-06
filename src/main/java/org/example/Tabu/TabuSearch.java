@@ -115,4 +115,5 @@ public class TabuSearch {
     public List<Solution> getLSChromosomes() {
         return LSChromosomes;
     }
+
 }

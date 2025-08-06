@@ -8,20 +8,20 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.example.Tabu.EvaluationFunction.*;
 
-public class LocalSearch implements Runnable {
+public class IntensificationSearch implements Runnable {
     @Override
     public void run() {
         tabuSearch.getLSChromosomes().add(localSearch());
     }
 
-    private TabuSearch tabuSearch;
+    private TabuSearchTest tabuSearch;
     private Solution ch;
     private final Random rand;
     private static Patient[] allPatients;
     private static int allCaregivers;
     private static double[][] distances;
 
-    public LocalSearch( TabuSearch tabuSearch, Solution ch) {
+    public IntensificationSearch(TabuSearchTest tabuSearch, Solution ch) {
         this.tabuSearch = tabuSearch;
         this.ch = ch;
         this.rand = ThreadLocalRandom.current();
