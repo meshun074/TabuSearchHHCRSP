@@ -89,7 +89,7 @@ public class Shift {
     }
 
     public void updateTardiness(double tardiness) {
-        double newValue = this.tardiness.getLast() + tardiness;
+        double newValue = this.tardiness.get(this.tardiness.size()-1) + tardiness;
         this.tardiness.add(newValue);
         updateMaxTardiness(tardiness);
     }
@@ -112,7 +112,7 @@ public class Shift {
     }
 
     public void updateMaxTardiness(double maxTardiness) {
-        double currentMax = this.maxTardiness.getLast();
+        double currentMax = this.maxTardiness.get(this.maxTardiness.size()-1);
         this.maxTardiness.add(Math.max(currentMax, maxTardiness));
     }
 
@@ -129,7 +129,7 @@ public class Shift {
     }
 
     public void updateTravelCost(double travelCost) {
-        double newValue = this.travelCost.getLast() + travelCost;
+        double newValue = this.travelCost.get(this.travelCost.size()-1) + travelCost;
         this.travelCost.add(newValue);
     }
 
