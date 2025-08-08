@@ -55,7 +55,7 @@ public class TabuSearchMain {
         startTimer();
         int iterationWithoutImprovement = 0;
         double bestFitness = bestSolution.getFitness();
-        int limit = 2;
+        int limit = MAX_NO_IMPROVEMENT < 150?2:1;
         for (int iter = 0; iter < MAX_ITERATION; iter++) {
             int tabuSize = (int) Math.round((MIN_TABU_SIZE + (MAX_TABU_SIZE - MIN_TABU_SIZE) * Math.random()));
             int lsStrategy = random.nextInt(3);
@@ -335,7 +335,7 @@ public class TabuSearchMain {
                 for (int i = 0; i < searchSize; i++) {
 //                    int patient = selectionList.get(i);
                     tasks.add(() -> {
-                        new LocalSearchPlus(this, currentSolution).run();
+                        new LocalSearch(this, currentSolution).run();
                         return null;
                     });
                 }

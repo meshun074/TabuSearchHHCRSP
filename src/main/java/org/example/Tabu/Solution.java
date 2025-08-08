@@ -241,7 +241,7 @@ public class Solution {
             System.out.println(Caregiver.getCaregiver().getId() +" - "+ route);
             System.out.println("Travel Cost to patients\n"+Caregiver.getTravelCost());
             System.out.println("Service completed time at patients\n"+Caregiver.getCurrentTime());
-            System.out.println("Route total tardiness: "+Caregiver.getTardiness().getLast()+" Route Highest tardiness: "+Caregiver.getMaxTardiness().getLast());
+            System.out.println("Route total tardiness: "+Caregiver.getTardiness().get(Caregiver.getTardiness().size()-1)+" Route Highest tardiness: "+Caregiver.getMaxTardiness().get(Caregiver.getMaxTardiness().size()-1));
             System.out.println();
         }
 
