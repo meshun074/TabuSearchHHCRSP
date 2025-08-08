@@ -34,7 +34,8 @@ public class TabuSearchTest {
         LSChromosomes  = new ArrayList<>(patientCount);
         this.osBean = ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
         this.MAX_NO_IMPROVEMENT = patientCount/2;
-        this.searchSize = patientCount/5;
+//        this.searchSize = Math.max(patientCount / 5, 50);
+        this.searchSize = 100;
         this.LSRate = MAX_NO_IMPROVEMENT/5;
         EvaluationFunction.initialize(data);
         this.MAX_TABU_SIZE = patientCount/4;
